@@ -2,9 +2,10 @@ from scipy.spatial import KDTree
 from celluloid import Camera  # 保存动图时用，pip install celluloid
 from PID_controller import PID_posi_2, PID_inc
 import numpy as np
-import matplotlib
 import matplotlib.pyplot as plt
 import math
+
+
 class KinematicModel_3:
   """假设控制量为转向角delta_f和加速度a
   """
@@ -28,11 +29,6 @@ class KinematicModel_3:
     return self.x, self.y, self.psi, self.v
 
 
-## 位置式
-PID = PID_posi_2(k=[2, 0.01, 30], target=0, upper=np.pi/6, lower=-np.pi/6)
-## 增量式
-# PID = PID_inc(k=[2.5, 0.175, 30], target=0, upper=np.pi/6, lower=-np.pi/6)
-
 def cal_target_index(robot_state,refer_path):
     """得到临近的路点
 
@@ -52,6 +48,11 @@ def cal_target_index(robot_state,refer_path):
     return min_index
 
 def main():
+    ## 位置式
+    # PID = PID_posi_2(k=[2, 0.01, 30], target=0, upper=np.pi/6, lower=-np.pi/6)
+    ## 增量式
+    PID = PID_inc(k=[2.5, 0.175, 30], target=0, upper=np.pi/6, lower=-np.pi/6)
+
     # set reference trajectory
     refer_path = np.zeros((1000, 2))
     refer_path[:, 0] = np.linspace(0, 100, 1000)  # 直线
@@ -66,6 +67,7 @@ def main():
     c = 2
     x_ = []
     y_ = []
+    e_y_list = []
     fig = plt.figure(1)
     # 保存动图用
     camera = Camera(fig)
@@ -78,11 +80,13 @@ def main():
         # ind = cal_target_index(robot_state,refer_path)  # 使用简单的一个函数实现查询离robot_state最近的点，耗时比较长
 
         alpha = math.atan2(
-            refer_path[ind, 1]-robot_state[1], refer_path[ind, 0]-robot_state[0])
-        l_d = np.linalg.norm(refer_path[ind]-robot_state)
+            refer_path[ind, 1] - robot_state[1],
+            refer_path[ind, 0] - robot_state[0])
+        l_d = np.linalg.norm(refer_path[ind] - robot_state)
         # l_d = k*ugv.v+c  # 前视距离
-        theta_e = alpha-ugv.psi
-        e_y = -l_d*math.sin(theta_e)  # 与博客中公式相比多了个负号，我目前还不是太理解，暂时先放着
+        theta_e = alpha - ugv.psi
+        e_y = -l_d * math.sin(theta_e)  # 与博客中公式相比多了个负号，我目前还不是太理解，暂时先放着
+        e_y_list.append(e_y)
         # e_y = -l_d*np.sign(math.sin(theta_e))  # 第二种误差表示
         # e_y = robot_state[1]-refer_path[ind, 1] #第三种误差表示
         # PID.set_target(0)
@@ -110,6 +114,10 @@ def main():
     plt.figure(2)
     plt.plot(refer_path[:, 0], refer_path[:, 1], '-.b', linewidth=1.0)
     plt.plot(x_, y_, 'r')
+    plt.show()
+
+    plt.figure(3)
+    plt.plot(x_, e_y_list, 'r')
     plt.show()
 
 if __name__=='__main__':

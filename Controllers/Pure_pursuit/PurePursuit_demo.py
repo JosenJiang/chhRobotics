@@ -1,17 +1,7 @@
 from celluloid import Camera  # 保存动图时用，pip install celluloid
 import numpy as np
-import matplotlib
 import matplotlib.pyplot as plt
 import math
-
-L=2 # 车辆轴距，单位：m
-v = 2 # 初始速度
-x_0=0 # 初始x
-y_0=-3 #初始y
-psi_0=0 # 初始航向角
-dt=0.1 # 时间间隔，单位：s
-lam = 0.1 # 前视距离系数
-c=2 # 前视距离
 
 
 class KinematicModel_3:
@@ -43,7 +33,7 @@ def cal_target_index(robot_state, refer_path, l_d):
     Args:
         robot_state (_type_): 当前车辆位置
         refer_path (_type_): 参考轨迹（数组）
-        l_d：前视距离
+        l_d: 前视距离
     Returns:
         _type_: 前视目标点的索引
     """
@@ -61,27 +51,36 @@ def cal_target_index(robot_state, refer_path, l_d):
         min_index += 1
     return min_index
 
-def pure_pursuit_control(robot_state,current_ref_point,l_d,psi):
+
+def pure_pursuit_control(robot_state, current_ref_point, l_d, psi, L):
     """pure pursuit
 
     Args:
         robot_state (_type_): 车辆位置
         current_ref_point (_type_): 当前参考路点
-        l_d：前视距离
-    return:返回前轮转向角delta
+        l_d: 前视距离
+    return: 返回前轮转向角delta
     """
-    alpha = math.atan2(current_ref_point[1]-robot_state[1], current_ref_point[0]-robot_state[0])-psi
+    alpha = math.atan2(current_ref_point[1] - robot_state[1], current_ref_point[0] - robot_state[0])-psi
     delta = math.atan2(2*L*np.sin(alpha),l_d)
     return delta
-    
+
+
 def main():
     # set reference trajectory
     refer_path = np.zeros((1000, 2))
     refer_path[:, 0] = np.linspace(0, 100, 1000)  # 直线
-    refer_path[:, 1] = 2*np.sin(refer_path[:, 0]/3.0) + \
-        2.5*np.cos(refer_path[:, 0]/2.0)  # 生成正弦轨迹
+    refer_path[:, 1] = 2 * np.sin(refer_path[:, 0] / 3.0) + \
+        2.5 * np.cos(refer_path[:, 0] / 2.0)  # 生成正弦轨迹
 
-
+    L = 2 # 车辆轴距，单位：m
+    v = 2 # 初始速度
+    x_0 = 0 # 初始x
+    y_0 = -3 #初始y
+    psi_0 = 0 # 初始航向角
+    dt = 0.1 # 时间间隔，单位：s
+    lam = 0.1 # 前视距离系数
+    c = 2 # 前视距离
     ugv = KinematicModel_3(x_0, y_0, psi_0, v, L, dt)
 
     x_ = []
@@ -94,10 +93,10 @@ def main():
         robot_state[0] = ugv.x
         robot_state[1] = ugv.y
 
-        l_d = lam*ugv.v+c  # 注意，这里的运动学模型使用的速度v就是车身纵向速度vx
+        l_d = lam * ugv.v + c  # 注意，这里的运动学模型使用的速度v就是车身纵向速度vx
         ind = cal_target_index(robot_state, refer_path, l_d)  # 搜索前视路点
 
-        delta = pure_pursuit_control(robot_state, refer_path[ind], l_d,ugv.psi)
+        delta = pure_pursuit_control(robot_state, refer_path[ind], l_d, ugv.psi, L)
 
         ugv.update_state(0, delta)  # 加速度设为0，恒速
 
@@ -120,6 +119,7 @@ def main():
     plt.plot(refer_path[:, 0], refer_path[:, 1], '-.b', linewidth=1.0)
     plt.plot(x_, y_, 'r')
     plt.show()
+
 
 if __name__=='__main__':
     main()
