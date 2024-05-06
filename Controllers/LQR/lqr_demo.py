@@ -197,6 +197,20 @@ def cal_Ricatti(A, B, Q, R):
     return P_
 
 
+def compute_P_F(A, B, Q, R, x):
+    P = Q  # P[0]
+    last_P = P
+    for _ in range(N - 1):
+        F = np.linalg.pinv(B.T @ P @ B + R) @ B.T @ P @ A  # F[N - k]
+        P = (A - B @ F).T @ P @ (A - B @ F) + F.T @ R @ F + Q  # P[k]
+        if abs(P - last_P).max() < EPS:
+            break
+        last_P = P
+    F = np.linalg.pinv(B.T @ P @ B + R) @ B.T @ P @ A  # F[0]
+    u = -F @ x
+    return u
+
+
 def lqr(robot_state, refer_path, s0, A, B, Q, R):
     """
     LQR控制器
@@ -209,14 +223,16 @@ def lqr(robot_state, refer_path, s0, A, B, Q, R):
     K = -np.linalg.pinv(R + B.T @ P @ B) @ B.T @ P @ A
     u = K @ x
     u_star = u  # u_star = [[v-ref_v,delta-ref_delta]]
-    # print(u_star)
+ 
+    my_u = compute_P_F(A, B, Q, R, x)
+    if (abs(my_u[0, 0] - u_star[0, 0]) > EPS) and (abs(my_u[0, 1] - u_star[0, 1]) > EPS):
+        raise ValueError("u is not the same!")
+
     return u_star[0, 1]
 
 
-# 使用随便生成的轨迹
-
-
 def main():
+    # 使用随便生成的轨迹
     reference_path = MyReferencePath()
     goal = reference_path.refer_path[-1, 0:2]
 
